@@ -257,6 +257,30 @@ def _valid_params(particle_types=["A", "B"]):
         )
     )
 
+    gay_berne_full_arg_dict = {
+        "params": (
+            {
+                "epsilon": [0.5, 0.25, 0.1],
+                "lperp": [0.5, 0.45, 0.3],
+                "lpar": [0.7, 0.2, 0.375],
+                "e_i_perp": [1.0, 1.0, 1.0],
+                "e_i_par": [1.0, 1.0, 1.0],
+                "e_j_perp": [1.0, 1.0, 1.0],
+                "e_j_par": [1.0, 1.0, 1.0],
+                "mu": [1.0, 1.0, 1.0],
+                "upsilon": [0.5, 0.5, 0.5],
+            },
+            2,
+        )
+    }
+
+    valid_params_list.append(
+        make_aniso_spec(
+            md.pair.aniso.GayBerneFull,
+            to_type_parameter_dicts(particle_types, gay_berne_full_arg_dict),
+        )
+    )
+
     alj_arg_dict0 = {
         "params": (
             {

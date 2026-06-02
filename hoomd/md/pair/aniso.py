@@ -387,6 +387,148 @@ class GayBerne(AnisotropicPair):
         return super()._return_type_shapes()
 
 
+class GayBerneFull(AnisotropicPair):
+    r"""Full Gay-Berne anisotropic pair force with orientation-dependent well depth.
+
+    Args:
+        nlist (hoomd.md.nlist.NeighborList): Neighbor list
+        default_r_cut (float): Default cutoff radius :math:`[\mathrm{length}]`.
+        mode (str): energy shifting/smoothing mode.
+
+    `GayBerneFull` computes the Gay-Berne anisotropic pair force on every
+    particle in the simulation state. It supports identical pairs of uniaxial
+    ellipsoids with both orientation-dependent contact distance and
+    orientation-dependent well depth, matching the formulation of
+    `Brown et al. 2009`_ as implemented in LAMMPS ``pair_gayberne``.
+
+    .. _Brown et al. 2009: https://doi.org/10.1063/1.3058435
+    .. _Allen et. al. 2006: https://dx.doi.org/10.1080/00268970601075238
+
+    .. math::
+        U(\vec r, \vec e_i, \vec e_j) =
+        \begin{cases}
+        4 \varepsilon\, \eta\, \chi
+        \left[ \zeta^{-12} - \zeta^{-6} \right]
+        & \zeta < \zeta_{\mathrm{cut}} \\
+        0 & \zeta \ge \zeta_{\mathrm{cut}}
+        \end{cases}
+
+    where :math:`\zeta` and :math:`\sigma` are the orientation-dependent contact
+    distance terms from `Allen et. al. 2006`_, and the additional factors are:
+
+    .. math::
+
+        \begin{split}
+        \eta &= \left(\frac{2\,\ell_{\mathrm{shape},i}\,\ell_{\mathrm{shape},j}}
+                           {\det \mathbf{G}_{12}}\right)^{\upsilon}, \\
+        \chi &= \left(2\,\hat{\vec{r}} \cdot \mathbf{B}_{12}^{-1}
+                      \cdot \hat{\vec{r}}\right)^{\mu}, \\
+        \mathbf{B}_k &= w_{k,\perp}\,\mathbf{1}
+            + (w_{k,\parallel} - w_{k,\perp})\,\vec{e}_k \otimes \vec{e}_k, \\
+        w_{k,\perp} &= \varepsilon_{k,\perp}^{-1/\mu}, \quad
+        w_{k,\parallel} = \varepsilon_{k,\parallel}^{-1/\mu},
+        \end{split}
+
+    :math:`\mathbf{G}_{12} = \mathbf{G}_i + \mathbf{G}_j` is the sum of the
+    shape tensors, :math:`\mathbf{B}_{12} = \mathbf{B}_i + \mathbf{B}_j` is
+    the sum of the well-depth tensors, and
+    :math:`\ell_{\mathrm{shape}} = (\ell_\perp^2 + \ell_\parallel^2)\,\ell_\perp`.
+
+    When :math:`\varepsilon_{k,\perp} = \varepsilon_{k,\parallel} = 1` (the
+    defaults), :math:`\chi` reduces to a constant and the potential is
+    equivalent to `GayBerne` with a scalar :math:`\varepsilon`.
+
+    Example::
+
+        nl = nlist.Cell()
+        gay_berne_full = md.pair.aniso.GayBerneFull(nlist=nl, default_r_cut=2.5)
+
+        # Scalar-epsilon behaviour (all e_* default to 1.0):
+        gay_berne_full.params[('A', 'A')] = dict(epsilon=1.0, lperp=0.45, lpar=0.5)
+
+        # Full orientation-dependent well depth:
+        gay_berne_full.params[('A', 'A')] = dict(
+            epsilon=1.0, lperp=0.45, lpar=0.5,
+            e_i_perp=0.2, e_i_par=1.0,
+            e_j_perp=0.2, e_j_par=1.0,
+            mu=1.0, upsilon=0.5,
+        )
+
+    {inherited}
+
+
+    **Members defined in** `GayBerneFull`:
+
+    .. py:attribute:: params
+
+        The Gay-Berne potential parameters. The dictionary has the following
+        keys:
+
+        * ``epsilon`` (`float`, **required**) - overall energy scale
+          :math:`\varepsilon` :math:`[\mathrm{energy}]`.
+        * ``lperp`` (`float`, **required**) - :math:`\ell_\perp`, semiaxis
+          perpendicular to the particle symmetry axis :math:`[\mathrm{length}]`.
+        * ``lpar`` (`float`, **required**) - :math:`\ell_\parallel`, semiaxis
+          parallel to the particle symmetry axis :math:`[\mathrm{length}]`.
+        * ``e_i_perp`` (`float`, *optional*) - well depth of the first particle
+          type perpendicular to its axis, :math:`\varepsilon_{i,\perp}`
+          :math:`[\mathrm{energy}]`. Default: ``1.0``.
+        * ``e_i_par`` (`float`, *optional*) - well depth of the first particle
+          type parallel to its axis, :math:`\varepsilon_{i,\parallel}`
+          :math:`[\mathrm{energy}]`. Default: ``1.0``.
+        * ``e_j_perp`` (`float`, *optional*) - well depth of the second particle
+          type perpendicular to its axis :math:`[\mathrm{energy}]`.
+          Default: ``1.0``.
+        * ``e_j_par`` (`float`, *optional*) - well depth of the second particle
+          type parallel to its axis :math:`[\mathrm{energy}]`. Default: ``1.0``.
+        * ``mu`` (`float`, *optional*) - exponent controlling orientational
+          dependence of the well depth. Default: ``1.0``.
+        * ``upsilon`` (`float`, *optional*) - exponent controlling the
+          shape-anisotropy prefactor :math:`\eta`. Default: ``0.5``.
+
+        Type: `TypeParameter` [`tuple` [``particle_type``, ``particle_type``],
+        `dict`]
+    """
+
+    _cpp_class_name = "AnisoPotentialPairGBFull"
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(AnisotropicPair._doc_inherited)
+    )
+
+    def __init__(self, nlist, default_r_cut=None, mode="none"):
+        super().__init__(nlist, default_r_cut, mode)
+        params = TypeParameter(
+            "params",
+            "particle_types",
+            TypeParameterDict(
+                epsilon=float,
+                lperp=float,
+                lpar=float,
+                e_i_perp=1.0,
+                e_i_par=1.0,
+                e_j_perp=1.0,
+                e_j_par=1.0,
+                mu=1.0,
+                upsilon=0.5,
+                len_keys=2,
+            ),
+        )
+        self._add_typeparam(params)
+
+    @log(category="object")
+    def type_shapes(self):
+        """Get all the types of shapes in the current simulation.
+
+        Example:
+            >>> gay_berne_full.type_shapes
+            [{'type': 'Ellipsoid', 'a': 1.0, 'b': 1.0, 'c': 1.5}]
+
+        Returns:
+            A list of dictionaries, one for each particle type in the system.
+        """
+        return super()._return_type_shapes()
+
+
 class ALJ(AnisotropicPair):
     r"""Anistropic LJ force.
 
@@ -1372,6 +1514,7 @@ __all__ = [
     "AnisotropicPair",
     "Dipole",
     "GayBerne",
+    "GayBerneFull",
     "Patchy",
     "PatchyExpandedGaussian",
     "PatchyExpandedLJ",
