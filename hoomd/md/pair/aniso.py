@@ -396,13 +396,12 @@ class GayBerneFull(AnisotropicPair):
         mode (str): energy shifting/smoothing mode.
 
     `GayBerneFull` computes the Gay-Berne anisotropic pair force on every
-    particle in the simulation state. It supports identical pairs of uniaxial
+    particle in the simulation. It supports identical pairs of uniaxial
     ellipsoids with both orientation-dependent contact distance and
     orientation-dependent well depth, matching the formulation of
-    `Brown et al. 2009`_ as implemented in LAMMPS ``pair_gayberne``.
+    `Brown et al. 2009`_ .
 
     .. _Brown et al. 2009: https://doi.org/10.1063/1.3058435
-    .. _Allen et. al. 2006: https://dx.doi.org/10.1080/00268970601075238
 
     .. math::
         U(\vec r, \vec e_i, \vec e_j) =
