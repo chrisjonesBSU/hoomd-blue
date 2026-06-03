@@ -37,9 +37,9 @@ namespace md
 /*!
  * Full Gay-Berne potential for identical uniaxial particles, with
  * orientation-dependent well depth (eta and chi factors) matching the
- * Brown et al. (2009) formulation as implemented in LAMMPS pair_gayberne.
+ * Brown et al. (2009) formulation.
  * When e_i_perp == e_i_par == e_j_perp == e_j_par == 1, chi reduces to a
- * constant and the potential recovers the Allen & Germano (2006) behaviour.
+ * constant.
  */
 
 class EvaluatorPairGBFull
