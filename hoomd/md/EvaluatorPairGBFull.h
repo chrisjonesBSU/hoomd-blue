@@ -75,7 +75,7 @@ class EvaluatorPairGBFull
             e_j_perp = 1;
             e_j_par  = 1;
             mu       = 1;
-            upsilon  = Scalar(0.5);
+            upsilon  = Scalar(1.0);
             }
 
 #ifndef __HIPCC__
@@ -90,7 +90,7 @@ class EvaluatorPairGBFull
             e_j_perp = v.contains("e_j_perp") ? v["e_j_perp"].cast<Scalar>() : Scalar(1.0);
             e_j_par  = v.contains("e_j_par")  ? v["e_j_par"].cast<Scalar>()  : Scalar(1.0);
             mu       = v.contains("mu")       ? v["mu"].cast<Scalar>()       : Scalar(1.0);
-            upsilon  = v.contains("upsilon")  ? v["upsilon"].cast<Scalar>()  : Scalar(0.5);
+            upsilon  = v.contains("upsilon")  ? v["upsilon"].cast<Scalar>()  : Scalar(1.0);
             }
 
         pybind11::dict toPython()
@@ -273,6 +273,12 @@ class EvaluatorPairGBFull
         Scalar lshape  = (lperpsq + lparsq) * lperp;
         Scalar eta_num = Scalar(2.0) * lshape * lshape;
 
+        // The user-facing `upsilon` is Brown 2009's nu (Eq. 6), which enters the
+        // shape prefactor as (.)^(nu/2).  LAMMPS pair_gayberne applies the same
+        // 1/2 (it divides the input by 2 at parse time); we apply it here at the
+        // point of use so the two codes agree for identical input parameters.
+        Scalar upsilon_eff = Scalar(0.5) * upsilon;
+
         Scalar L0 = Scalar(2.0) * lperpsq;
         Scalar dL = lparsq - lperpsq;
 
@@ -286,7 +292,7 @@ class EvaluatorPairGBFull
                        - g01 * (g01 * g22 - g12 * g02)
                        + g02 * (g01 * g12 - g11 * g02);
 
-        Scalar eta = fast::pow(eta_num / det_G12, upsilon);
+        Scalar eta = fast::pow(eta_num / det_G12, upsilon_eff);
 
         Scalar P = eta * chi_e;
 
@@ -371,7 +377,7 @@ class EvaluatorPairGBFull
         vec3<Scalar> G12inv_a3 = M1s_inv_a3 - (dL / denom_js) * b3_M1s_inv_a3 * M1s_inv_b3;
         vec3<Scalar> G12inv_b3 = M1s_inv_b3 - (dL / denom_js) * b3_M1s_inv_b3 * M1s_inv_b3;
 
-        Scalar eta_fac = upsilon * eta * Scalar(2.0) * dL * epsilon * u_r * chi_e;
+        Scalar eta_fac = upsilon_eff * eta * Scalar(2.0) * dL * epsilon * u_r * chi_e;
         torque_i += vec_to_scalar3(cross(a3, eta_fac * G12inv_a3));
         torque_j += vec_to_scalar3(cross(b3, eta_fac * G12inv_b3));
 
