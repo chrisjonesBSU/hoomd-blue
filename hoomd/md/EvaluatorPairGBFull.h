@@ -217,15 +217,11 @@ class EvaluatorPairGBFull
         Scalar sigma = fast::rsqrt(phi);
 
         Scalar sigma_min = Scalar(2.0) * HOOMD_GB_MIN(lperp, lpar);
-        Scalar sigma_max = Scalar(2.0) * HOOMD_GB_MAX(lperp, lpar);
         Scalar zeta      = (r - sigma + sigma_min) / sigma_min;
         Scalar zetasq    = zeta * zeta;
 
-        Scalar rcut      = fast::sqrt(rcutsq);
-        Scalar zetacut   = rcut / sigma_max;
-        Scalar zetacutsq = zetacut * zetacut;
-
-        if (zetasq >= zetacutsq || epsilon == Scalar(0.0))
+        // Radial cutoff at r >= r_cut (Brown 2009 rc = 4*sigma_0; matches LAMMPS).
+        if (rsq >= rcutsq || epsilon == Scalar(0.0))
             return false;
 
         // ---------------------------------------------------------------
@@ -273,10 +269,7 @@ class EvaluatorPairGBFull
         Scalar lshape  = (lperpsq + lparsq) * lperp;
         Scalar eta_num = Scalar(2.0) * lshape * lshape;
 
-        // The user-facing `upsilon` is Brown 2009's nu (Eq. 6), which enters the
-        // shape prefactor as (.)^(nu/2).  LAMMPS pair_gayberne applies the same
-        // 1/2 (it divides the input by 2 at parse time); we apply it here at the
-        // point of use so the two codes agree for identical input parameters.
+        // upsilon enters the shape prefactor as eta = (.)^(upsilon/2)  (Brown 2009 Eq. 6).
         Scalar upsilon_eff = Scalar(0.5) * upsilon;
 
         Scalar L0 = Scalar(2.0) * lperpsq;
@@ -316,10 +309,13 @@ class EvaluatorPairGBFull
 
         if (energy_shift)
             {
-            Scalar zetacut2inv = Scalar(1.0) / zetacutsq;
-            Scalar zetacut6inv = zetacut2inv * zetacut2inv * zetacut2inv;
+            // shift so U is continuous at r = r_cut for this orientation
+            Scalar rcut        = fast::sqrt(rcutsq);
+            Scalar zeta_rcut   = (rcut - sigma + sigma_min) / sigma_min;
+            Scalar zeta_rcut2i = Scalar(1.0) / (zeta_rcut * zeta_rcut);
+            Scalar zeta_rcut6i = zeta_rcut2i * zeta_rcut2i * zeta_rcut2i;
             pair_eng -= epsilon * P
-                        * Scalar(4.0) * zetacut6inv * (zetacut6inv - Scalar(1.0));
+                        * Scalar(4.0) * zeta_rcut6i * (zeta_rcut6i - Scalar(1.0));
             }
 
         // ---------------------------------------------------------------

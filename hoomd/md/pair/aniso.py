@@ -408,8 +408,8 @@ class GayBerneFull(AnisotropicPair):
         \begin{cases}
         4 \varepsilon\, \eta\, \chi
         \left[ \zeta^{-12} - \zeta^{-6} \right]
-        & \zeta < \zeta_{\mathrm{cut}} \\
-        0 & \zeta \ge \zeta_{\mathrm{cut}}
+        & r < r_{\mathrm{cut}} \\
+        0 & r \ge r_{\mathrm{cut}}
         \end{cases}
 
     where :math:`\zeta` and :math:`\sigma` are the orientation-dependent contact
