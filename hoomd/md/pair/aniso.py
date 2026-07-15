@@ -396,21 +396,20 @@ class GayBerneFull(AnisotropicPair):
         mode (str): energy shifting/smoothing mode.
 
     `GayBerneFull` computes the Gay-Berne anisotropic pair force on every
-    particle in the simulation state. It supports identical pairs of uniaxial
+    particle in the simulation. It supports identical pairs of uniaxial
     ellipsoids with both orientation-dependent contact distance and
     orientation-dependent well depth, matching the formulation of
-    `Brown et al. 2009`_ as implemented in LAMMPS ``pair_gayberne``.
+    `Brown et al. 2009`_ .
 
     .. _Brown et al. 2009: https://doi.org/10.1063/1.3058435
-    .. _Allen et. al. 2006: https://dx.doi.org/10.1080/00268970601075238
 
     .. math::
         U(\vec r, \vec e_i, \vec e_j) =
         \begin{cases}
         4 \varepsilon\, \eta\, \chi
         \left[ \zeta^{-12} - \zeta^{-6} \right]
-        & \zeta < \zeta_{\mathrm{cut}} \\
-        0 & \zeta \ge \zeta_{\mathrm{cut}}
+        & r < r_{\mathrm{cut}} \\
+        0 & r \ge r_{\mathrm{cut}}
         \end{cases}
 
     where :math:`\zeta` and :math:`\sigma` are the orientation-dependent contact
@@ -420,7 +419,7 @@ class GayBerneFull(AnisotropicPair):
 
         \begin{split}
         \eta &= \left(\frac{2\,\ell_{\mathrm{shape},i}\,\ell_{\mathrm{shape},j}}
-                           {\det \mathbf{G}_{12}}\right)^{\upsilon}, \\
+                           {\det \mathbf{G}_{12}}\right)^{\upsilon/2}, \\
         \chi &= \left(2\,\hat{\vec{r}} \cdot \mathbf{B}_{12}^{-1}
                       \cdot \hat{\vec{r}}\right)^{\mu}, \\
         \mathbf{B}_k &= w_{k,\perp}\,\mathbf{1}
@@ -451,7 +450,7 @@ class GayBerneFull(AnisotropicPair):
             epsilon=1.0, lperp=0.45, lpar=0.5,
             e_i_perp=0.2, e_i_par=1.0,
             e_j_perp=0.2, e_j_par=1.0,
-            mu=1.0, upsilon=0.5,
+            mu=1.0, upsilon=1.0,
         )
 
     {inherited}
@@ -483,8 +482,9 @@ class GayBerneFull(AnisotropicPair):
           type parallel to its axis :math:`[\mathrm{energy}]`. Default: ``1.0``.
         * ``mu`` (`float`, *optional*) - exponent controlling orientational
           dependence of the well depth. Default: ``1.0``.
-        * ``upsilon`` (`float`, *optional*) - exponent controlling the
-          shape-anisotropy prefactor :math:`\eta`. Default: ``0.5``.
+        * ``upsilon`` (`float`, *optional*) - exponent :math:`\upsilon`
+          controlling the shape-anisotropy prefactor :math:`\eta`, which enters
+          as :math:`(\cdots)^{\upsilon/2}`. Default: ``1.0``.
 
         Type: `TypeParameter` [`tuple` [``particle_type``, ``particle_type``],
         `dict`]
@@ -509,7 +509,7 @@ class GayBerneFull(AnisotropicPair):
                 e_j_perp=1.0,
                 e_j_par=1.0,
                 mu=1.0,
-                upsilon=0.5,
+                upsilon=1.0,
                 len_keys=2,
             ),
         )

@@ -37,9 +37,9 @@ namespace md
 /*!
  * Full Gay-Berne potential for identical uniaxial particles, with
  * orientation-dependent well depth (eta and chi factors) matching the
- * Brown et al. (2009) formulation as implemented in LAMMPS pair_gayberne.
+ * Brown et al. (2009) formulation.
  * When e_i_perp == e_i_par == e_j_perp == e_j_par == 1, chi reduces to a
- * constant and the potential recovers the Allen & Germano (2006) behaviour.
+ * constant.
  */
 
 class EvaluatorPairGBFull
@@ -75,7 +75,7 @@ class EvaluatorPairGBFull
             e_j_perp = 1;
             e_j_par  = 1;
             mu       = 1;
-            upsilon  = Scalar(0.5);
+            upsilon  = Scalar(1.0);
             }
 
 #ifndef __HIPCC__
@@ -90,7 +90,7 @@ class EvaluatorPairGBFull
             e_j_perp = v.contains("e_j_perp") ? v["e_j_perp"].cast<Scalar>() : Scalar(1.0);
             e_j_par  = v.contains("e_j_par")  ? v["e_j_par"].cast<Scalar>()  : Scalar(1.0);
             mu       = v.contains("mu")       ? v["mu"].cast<Scalar>()       : Scalar(1.0);
-            upsilon  = v.contains("upsilon")  ? v["upsilon"].cast<Scalar>()  : Scalar(0.5);
+            upsilon  = v.contains("upsilon")  ? v["upsilon"].cast<Scalar>()  : Scalar(1.0);
             }
 
         pybind11::dict toPython()
@@ -217,15 +217,11 @@ class EvaluatorPairGBFull
         Scalar sigma = fast::rsqrt(phi);
 
         Scalar sigma_min = Scalar(2.0) * HOOMD_GB_MIN(lperp, lpar);
-        Scalar sigma_max = Scalar(2.0) * HOOMD_GB_MAX(lperp, lpar);
         Scalar zeta      = (r - sigma + sigma_min) / sigma_min;
         Scalar zetasq    = zeta * zeta;
 
-        Scalar rcut      = fast::sqrt(rcutsq);
-        Scalar zetacut   = rcut / sigma_max;
-        Scalar zetacutsq = zetacut * zetacut;
-
-        if (zetasq >= zetacutsq || epsilon == Scalar(0.0))
+        // Radial cutoff at r >= r_cut (Brown 2009 rc = 4*sigma_0; matches LAMMPS).
+        if (rsq >= rcutsq || epsilon == Scalar(0.0))
             return false;
 
         // ---------------------------------------------------------------
@@ -273,6 +269,9 @@ class EvaluatorPairGBFull
         Scalar lshape  = (lperpsq + lparsq) * lperp;
         Scalar eta_num = Scalar(2.0) * lshape * lshape;
 
+        // upsilon enters the shape prefactor as eta = (.)^(upsilon/2)  (Brown 2009 Eq. 6).
+        Scalar upsilon_eff = Scalar(0.5) * upsilon;
+
         Scalar L0 = Scalar(2.0) * lperpsq;
         Scalar dL = lparsq - lperpsq;
 
@@ -286,7 +285,7 @@ class EvaluatorPairGBFull
                        - g01 * (g01 * g22 - g12 * g02)
                        + g02 * (g01 * g12 - g11 * g02);
 
-        Scalar eta = fast::pow(eta_num / det_G12, upsilon);
+        Scalar eta = fast::pow(eta_num / det_G12, upsilon_eff);
 
         Scalar P = eta * chi_e;
 
@@ -310,10 +309,13 @@ class EvaluatorPairGBFull
 
         if (energy_shift)
             {
-            Scalar zetacut2inv = Scalar(1.0) / zetacutsq;
-            Scalar zetacut6inv = zetacut2inv * zetacut2inv * zetacut2inv;
+            // shift so U is continuous at r = r_cut for this orientation
+            Scalar rcut        = fast::sqrt(rcutsq);
+            Scalar zeta_rcut   = (rcut - sigma + sigma_min) / sigma_min;
+            Scalar zeta_rcut2i = Scalar(1.0) / (zeta_rcut * zeta_rcut);
+            Scalar zeta_rcut6i = zeta_rcut2i * zeta_rcut2i * zeta_rcut2i;
             pair_eng -= epsilon * P
-                        * Scalar(4.0) * zetacut6inv * (zetacut6inv - Scalar(1.0));
+                        * Scalar(4.0) * zeta_rcut6i * (zeta_rcut6i - Scalar(1.0));
             }
 
         // ---------------------------------------------------------------
@@ -371,7 +373,7 @@ class EvaluatorPairGBFull
         vec3<Scalar> G12inv_a3 = M1s_inv_a3 - (dL / denom_js) * b3_M1s_inv_a3 * M1s_inv_b3;
         vec3<Scalar> G12inv_b3 = M1s_inv_b3 - (dL / denom_js) * b3_M1s_inv_b3 * M1s_inv_b3;
 
-        Scalar eta_fac = upsilon * eta * Scalar(2.0) * dL * epsilon * u_r * chi_e;
+        Scalar eta_fac = upsilon_eff * eta * Scalar(2.0) * dL * epsilon * u_r * chi_e;
         torque_i += vec_to_scalar3(cross(a3, eta_fac * G12inv_a3));
         torque_j += vec_to_scalar3(cross(b3, eta_fac * G12inv_b3));
 
