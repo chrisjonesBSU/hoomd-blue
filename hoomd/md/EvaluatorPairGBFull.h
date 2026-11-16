@@ -4,12 +4,12 @@
 #ifndef __EVALUATOR_PAIR_GB_FULL_H__
 #define __EVALUATOR_PAIR_GB_FULL_H__
 
-#ifndef __HIPCC__
+#ifndef __NVCC__
 #include <string>
 #endif
 
-#ifdef ENABLE_HIP
-#include <hip/hip_runtime.h>
+#ifdef ENABLE_GPU
+#include <cuda_runtime.h>
 #endif
 
 #define HOOMD_GB_MIN(i, j) ((i > j) ? j : i)
@@ -22,7 +22,7 @@
            orientation-dependent well depth (Brown et al. 2009).
 */
 
-#ifdef __HIPCC__
+#ifdef __NVCC__
 #define HOSTDEVICE __host__ __device__
 #define DEVICE __device__
 #else
@@ -61,7 +61,7 @@ class EvaluatorPairGBFull
 
         HOSTDEVICE void allocate_shared(char*& ptr, unsigned int& available_bytes) const { }
 
-#ifdef ENABLE_HIP
+#ifdef ENABLE_GPU
         void set_memory_hint() const { }
 #endif
 
@@ -78,7 +78,7 @@ class EvaluatorPairGBFull
             upsilon  = Scalar(1.0);
             }
 
-#ifndef __HIPCC__
+#ifndef __NVCC__
 
         param_type(pybind11::dict v, bool managed = false)
             {
@@ -124,7 +124,7 @@ class EvaluatorPairGBFull
 
         HOSTDEVICE shape_type() { }
 
-#ifndef __HIPCC__
+#ifndef __NVCC__
 
         shape_type(pybind11::object shape_params, bool managed) { }
 
@@ -134,7 +134,7 @@ class EvaluatorPairGBFull
             }
 #endif
 
-#ifdef ENABLE_HIP
+#ifdef ENABLE_GPU
         void set_memory_hint() const { }
 #endif
         };
@@ -390,7 +390,7 @@ class EvaluatorPairGBFull
         return 0;
         }
 
-#ifndef __HIPCC__
+#ifndef __NVCC__
     static std::string getName()
         {
         return "gbfull";
