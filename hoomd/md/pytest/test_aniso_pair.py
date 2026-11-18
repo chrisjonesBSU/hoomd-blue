@@ -158,7 +158,7 @@ def isclose(value, reference, rtol=5e-6):
     """Return if two values are close while automatically managing atol."""
     if isinstance(reference, (Sequence, np.ndarray)):
         ref = np.asarray(reference, np.float64)
-        val = np.asarray(reference, np.float64)
+        val = np.asarray(value, np.float64)
         min_value = np.min(np.abs(reference))
         atol = 1e-6 if min_value == 0 else min_value / 1e4
         return np.allclose(val, ref, rtol=rtol, atol=atol)
